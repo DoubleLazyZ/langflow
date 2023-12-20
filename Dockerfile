@@ -12,7 +12,8 @@ WORKDIR $HOME/app
 COPY --chown=user . $HOME/app
 
 
-RUN pip install git+https://github.com/logspace-ai/langflow.git -U --user
+# RUN pip install git+https://github.com/logspace-ai/langflow.git -U --userv0.5.12
+RUN pip install langflow==0.5.12 -U --user
 # RUN pip install langflow>==0.6.0 -U --user
 # RUN pip install langflow==0.6.3a3 -U --user
 RUN pip install langchain==0.0.345
