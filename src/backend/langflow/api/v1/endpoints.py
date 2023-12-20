@@ -1,8 +1,11 @@
 from http import HTTPStatus
-from typing import Annotated, Optional, Union
+from typing import Annotated, List, Optional, Union
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
+from loguru import logger
+from sqlmodel import select
+
 from langflow.api.utils import update_frontend_node_with_template_values
 from langflow.api.v1.schemas import (
     CustomComponentCode,
@@ -20,8 +23,6 @@ from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_session_service, get_settings_service, get_task_service
-from loguru import logger
-from sqlmodel import select
 
 try:
     from langflow.worker import process_graph_cached_task
@@ -31,8 +32,9 @@ except ImportError:
         raise NotImplementedError("Celery is not installed")
 
 
-from langflow.services.task.service import TaskService
 from sqlmodel import Session
+
+from langflow.services.task.service import TaskService
 
 # build router
 router = APIRouter(tags=["Base"])
@@ -40,7 +42,7 @@ router = APIRouter(tags=["Base"])
 
 async def process_graph_data(
     graph_data: dict,
-    inputs: Optional[dict] = None,
+    inputs: Optional[Union[List[dict], dict]] = None,
     tweaks: Optional[dict] = None,
     clear_cache: bool = False,
     session_id: Optional[str] = None,
@@ -49,20 +51,19 @@ async def process_graph_data(
 ):
     task_result = None
     task_status = None
-    task_id = None
     if tweaks:
         try:
             graph_data = process_tweaks(graph_data, tweaks)
         except Exception as exc:
             logger.error(f"Error processing tweaks: {exc}")
     if sync:
-        task_id, result = await task_service.launch_and_await_task(
-            process_graph_cached_task if task_service.use_celery else process_graph_cached,
+        result = await process_graph_cached(
             graph_data,
             inputs,
             clear_cache,
             session_id,
         )
+        task_id = str(id(result))
         if isinstance(result, dict) and "result" in result:
             task_result = result["result"]
             session_id = result["session_id"]
@@ -70,6 +71,8 @@ async def process_graph_data(
             task_result = result.result
 
             session_id = result.session_id
+        else:
+            task_result = result
     else:
         logger.warning(
             "This is an experimental feature and may not work as expected."
@@ -78,9 +81,19 @@ async def process_graph_data(
         if session_id is None:
             # Generate a session ID
             session_id = get_session_service().generate_key(session_id=session_id, data_graph=graph_data)
-        result = process_graph_cached(
-            data_graph=graph_data, inputs=inputs, clear_cache=clear_cache, session_id=session_id
+        task_id, task = await task_service.launch_task(
+            process_graph_cached_task if task_service.use_celery else process_graph_cached,
+            graph_data,
+            inputs,
+            clear_cache,
+            session_id,
         )
+        task_status = task.status
+        if task.status == "FAILURE":
+            logger.error(f"Task {task_id} failed: {task.traceback}")
+            task_result = str(task._exception)
+        else:
+            task_result = task.result
 
     if task_id:
         task_response = TaskResponse(id=task_id, href=f"api/v1/task/{task_id}")
@@ -147,7 +160,7 @@ async def process_json(
 async def process(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
-    inputs: Optional[dict] = None,
+    inputs: Optional[Union[List[dict], dict]] = None,
     tweaks: Optional[dict] = None,
     clear_cache: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821

@@ -6,11 +6,12 @@ from langchain.chains.base import Chain
 from langchain.schema import AgentAction, Document
 from langchain.vectorstores.base import VectorStore
 from langchain_core.runnables.base import Runnable
+from loguru import logger
+from pydantic import BaseModel
+
 from langflow.components.custom_components import CustomComponent
 from langflow.interface.run import build_sorted_vertices, get_memory_key, update_memory_keys
 from langflow.services.deps import get_session_service
-from loguru import logger
-from pydantic import BaseModel
 
 
 def fix_memory_inputs(langchain_object):
@@ -118,7 +119,7 @@ def process_inputs(inputs: Optional[dict], artifacts: Dict[str, Any]) -> dict:
     return inputs
 
 
-def generate_result(langchain_object: Union[Chain, VectorStore], inputs: dict):
+async def generate_result(langchain_object: Union[Chain, VectorStore, Runnable], inputs: Union[dict, List[dict]]):
     if isinstance(langchain_object, Chain):
         if inputs is None:
             raise ValueError("Inputs must be provided for a Chain")
@@ -131,8 +132,21 @@ def generate_result(langchain_object: Union[Chain, VectorStore], inputs: dict):
     elif isinstance(langchain_object, Document):
         result = langchain_object.dict()
     elif isinstance(langchain_object, Runnable):
-        result = langchain_object.invoke(inputs)
-        result = result.content if hasattr(result, "content") else result
+        # Define call_method as a coroutine function
+        # by default
+        if isinstance(inputs, List) and hasattr(langchain_object, "abatch"):
+            call_method = langchain_object.abatch
+        elif isinstance(inputs, dict) and hasattr(langchain_object, "ainvoke"):
+            call_method = langchain_object.ainvoke
+        else:
+            raise ValueError("Inputs must be provided for a Runnable")
+        result = await call_method(inputs)
+        if isinstance(result, list):
+            result = [r.content if hasattr(r, "content") else r for r in result]
+        elif hasattr(result, "content"):
+            result = result.content
+        else:
+            result = result
     elif hasattr(langchain_object, "run") and isinstance(langchain_object, CustomComponent):
         result = langchain_object.run(inputs)
 
@@ -152,7 +166,7 @@ class Result(BaseModel):
 
 async def process_graph_cached(
     data_graph: Dict[str, Any],
-    inputs: Optional[dict] = None,
+    inputs: Optional[Union[dict, List[dict]]] = None,
     clear_cache=False,
     session_id=None,
 ) -> Result:
@@ -168,7 +182,7 @@ async def process_graph_cached(
         raise ValueError("Graph not found in the session")
     built_object = await graph.build()
     processed_inputs = process_inputs(inputs, artifacts or {})
-    result = generate_result(built_object, processed_inputs)
+    result = await generate_result(built_object, processed_inputs)
     # langchain_object is now updated with the new memory
     # we need to update the cache with the updated langchain_object
     session_service.update_session(session_id, (graph, artifacts))
