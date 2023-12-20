@@ -16,5 +16,5 @@ COPY --chown=user . $HOME/app
 RUN pip install langflow==0.5.12 -U --user
 # RUN pip install langflow>==0.6.0 -U --user
 # RUN pip install langflow==0.6.3a3 -U --user
-RUN pip install langchain==0.0.345
+# RUN pip install langchain==0.0.345
 CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--port", "7860"]
