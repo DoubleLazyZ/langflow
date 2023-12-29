@@ -20,8 +20,11 @@ RUN apt-get update && apt-get install -y curl build-essential \
 # Set the working directory
 WORKDIR /app
 
-# Copy the pyproject.toml, poetry.lock, and README.md files
-COPY ./poetry.lock ./pyproject.toml ./README.md ./
+# Copy the backend application
+COPY ./src/backend /app/src/backend
+
+# Debug: List the contents of /app/src/backend/langflow
+RUN ls -la /app/src/backend/langflow
 
 # Install dependencies
 RUN poetry install --without dev --extras deploy
