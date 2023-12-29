@@ -9,34 +9,28 @@ ENV PYTHONUNBUFFERED=1 \
     POETRY_VERSION=1.7.0 \
     POETRY_HOME="/opt/poetry" \
     POETRY_VIRTUALENVS_IN_PROJECT=true \
-    POETRY_NO_INTERACTION=1 \
-    PYSETUP_PATH="/opt/pysetup" \
-    VENV_PATH="/opt/pysetup/.venv"
+    POETRY_NO_INTERACTION=1
 
-ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
+ENV PATH="$POETRY_HOME/bin:$PATH"
 
 # Install Poetry
 RUN apt-get update && apt-get install -y curl build-essential \
     && curl -sSL https://install.python-poetry.org | python3 -
 
-# Copy project files
-WORKDIR $PYSETUP_PATH
+# Set the working directory
+WORKDIR /app
+
+# Copy the pyproject.toml and poetry.lock files into the working directory
 COPY ./poetry.lock ./pyproject.toml ./
 
 # Install dependencies
 RUN poetry install --without dev --extras deploy
 
-# Copy the entire backend application
+# Copy the backend application into the working directory
 COPY ./src/backend /app
-
-# Set the working directory to the root of your Python project
-WORKDIR /app
-
 
 # Set an environment variable for auto-login
 # ENV LANGFLOW_AUTO_LOGIN=True
 
 # Start command
-# CMD ["python", "-m", "uvicorn", "langflow.main:create_app", "--host", "0.0.0.0", "--port", "7860"]
-
 CMD ["poetry", "run", "langflow", "run", "--backend-only", "--port", "7860", "--host", "0.0.0.0", "--no-open-browser", "--components-path", "src/backend/langflow/custom_components", "--env-file", ".env"]
