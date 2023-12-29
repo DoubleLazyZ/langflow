@@ -1,22 +1,35 @@
-# Use an official Node.js runtime as a parent image
-FROM node:latest
+# Stage 1: Build the frontend application
+FROM node:latest as build-stage
 
-# Set the working directory in the container
-WORKDIR /home/node/app
+# Set working directory
+WORKDIR /app
 
-# Copy package.json and install dependencies
-COPY ./src/frontend/package.json ./
+# Argument for backend URL
+ARG BACKEND_HOST
+
+# Set environment variable for the backend URL
+ENV REACT_APP_BACKEND_URL=${BACKEND_HOST}
+
+# Copy package.json and package-lock.json (or yarn.lock)
+COPY package*.json ./
+
+# Install dependencies
 RUN npm install
 
-# Copy the frontend application source
-COPY ./src/frontend/public ./public
-COPY ./src/frontend/src ./src
+# Copy frontend source code
+COPY . .
 
-# Expose port 3000
-EXPOSE 3000
+# Build the application
+RUN npm run build
 
-# Define environment variables
-ENV VITE_PROXY_TARGET=http://backend:7860
+# Stage 2: Serve the app with Nginx
+FROM nginx:alpine
 
-# Define the command to start the app
-CMD ["npm", "start"]
+# Copy built assets from build-stage to Nginx server
+COPY --from=build-stage /app/build /usr/share/nginx/html
+
+# Expose port 80
+EXPOSE 80
+
+# Start Nginx server
+CMD ["nginx", "-g", "daemon off;"]
