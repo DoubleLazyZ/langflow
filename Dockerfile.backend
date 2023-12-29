@@ -27,7 +27,7 @@ COPY ./pyproject.toml ./poetry.lock ./README.md ./
 RUN poetry install --without dev --extras deploy
 
 # Copy the backend application
-COPY ./src/backend ./src/backend
+COPY ./src/backend /app/src/backend
 
 # Set an environment variable for auto-login
 # ENV LANGFLOW_AUTO_LOGIN=True
