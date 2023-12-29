@@ -1,3 +1,9 @@
+
+Given that your poetry.lock and pyproject.toml files are in the root of your project, and the langflow project is in the src/backend/langflow directory, we need to structure the Dockerfile to reflect this setup. The poetry.lock and pyproject.toml files should be copied into the Docker image's working directory (/app), and the langflow project should be copied into an appropriate subdirectory within /app.
+
+Updated Dockerfile:
+Dockerfile
+Copy code
 # Base image with Python
 FROM python:3.10-slim as base
 
@@ -26,11 +32,11 @@ COPY ./pyproject.toml ./poetry.lock ./README.md ./
 # Install dependencies
 RUN poetry install --without dev --extras deploy
 
-# Copy the langflow backend application directly into the /app directory
-COPY ./src/backend/langflow /app
+# Copy the langflow backend application into a subdirectory within /app
+COPY ./src/backend/langflow ./langflow
 
 # Set an environment variable for auto-login
 # ENV LANGFLOW_AUTO_LOGIN=True
 
-# Update CMD with the adjusted path for components
-CMD ["poetry", "run", "langflow", "run", "--backend-only", "--port", "7860", "--host", "0.0.0.0", "--no-open-browser", "--components-path", "custom_components", "--env-file", ".env"]
+# Start command
+CMD ["poetry", "run", "langflow", "run", "--backend-only", "--port", "7860", "--host", "0.0.0.0", "--no-open-browser", "--components-path", "langflow/custom_components", "--env-file", ".env"]
