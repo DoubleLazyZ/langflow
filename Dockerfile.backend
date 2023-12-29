@@ -32,5 +32,11 @@ COPY ./src/backend /app
 # Set the working directory to the root of your Python project
 WORKDIR /app
 
+
+# Set an environment variable for auto-login
+# ENV LANGFLOW_AUTO_LOGIN=True
+
 # Start command
-CMD ["python", "-m", "uvicorn", "langflow.main:create_app", "--host", "0.0.0.0", "--port", "7860"]
+# CMD ["python", "-m", "uvicorn", "langflow.main:create_app", "--host", "0.0.0.0", "--port", "7860"]
+
+CMD ["poetry", "run", "langflow", "run", "--backend-only", "--port", "7860", "--host", "0.0.0.0", "--no-open-browser", "--components-path", "src/backend/langflow/custom_components", "--env-file", ".env"]
