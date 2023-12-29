@@ -20,14 +20,14 @@ RUN apt-get update && apt-get install -y curl build-essential \
 # Set the working directory
 WORKDIR /app
 
-# Copy the pyproject.toml, poetry.lock, and README.md files into the working directory
+# Copy the pyproject.toml, poetry.lock, and README.md files
 COPY ./poetry.lock ./pyproject.toml ./README.md ./
 
 # Install dependencies
 RUN poetry install --without dev --extras deploy
 
-# Copy the backend application into a subdirectory within /app
-COPY ./src/backend /app/backend
+# Copy the backend application
+COPY ./src/backend /app/src/backend
 
 # Set an environment variable for auto-login
 # ENV LANGFLOW_AUTO_LOGIN=True
