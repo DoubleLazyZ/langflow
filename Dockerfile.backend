@@ -1,26 +1,34 @@
-# Use an official Python runtime as a parent image
-FROM python:3.10-slim
+# Base image with Python
+FROM python:3.10-slim as base
 
-# Set the working directory in the container
-WORKDIR /app
+# Setup environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PIP_DEFAULT_TIMEOUT=100 \
+    POETRY_VERSION=1.5.1 \
+    POETRY_HOME="/opt/poetry" \
+    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    POETRY_NO_INTERACTION=1 \
+    PYSETUP_PATH="/opt/pysetup" \
+    VENV_PATH="/opt/pysetup/.venv"
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y gcc g++ curl build-essential postgresql-server-dev-all
+ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 
 # Install Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 -
+RUN apt-get update && apt-get install -y curl build-essential \
+    && curl -sSL https://install.python-poetry.org | python3 -
 
-# Add Poetry to PATH
-ENV PATH="${PATH}:/root/.local/bin"
+# Copy project files
+WORKDIR $PYSETUP_PATH
+COPY ./poetry.lock ./pyproject.toml ./README.md ./
 
-# Copy the project files (pyproject.toml and poetry.lock) into the container
-COPY poetry.lock pyproject.toml ./
+# Install dependencies
+RUN poetry install --without dev --extras deploy
 
-# Install Python dependencies
-RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
+# Copy the rest of the application
+COPY ./src/backend ./src/backend
+COPY ./tests ./tests
 
-# Copy the rest of the application code
-COPY ./src/backend /app
-
-# Make port 7860 available to the world outside this container
-EXPOSE 7860
+# Start command (Replace with your actual start command)
+CMD ["python", "-m", "uvicorn", "langflow.main:create_app", "--host", "0.0.0.0", "--port", "7860"]
