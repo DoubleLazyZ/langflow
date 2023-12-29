@@ -26,11 +26,11 @@ COPY ./pyproject.toml ./poetry.lock ./README.md ./
 # Install dependencies
 RUN poetry install --without dev --extras deploy
 
-# Copy the backend application into the working directory
-COPY ./src/backend/langflow /app/langflow
+# Copy the langflow backend application directly into the /app directory
+COPY ./src/backend/langflow /app
 
 # Set an environment variable for auto-login
 # ENV LANGFLOW_AUTO_LOGIN=True
 
-# Start command
-CMD ["poetry", "run", "langflow", "run", "--backend-only", "--port", "7860", "--host", "0.0.0.0", "--no-open-browser", "--components-path", "langflow/custom_components", "--env-file", ".env"]
+# Update CMD with the adjusted path for components
+CMD ["poetry", "run", "langflow", "run", "--backend-only", "--port", "7860", "--host", "0.0.0.0", "--no-open-browser", "--components-path", "custom_components", "--env-file", ".env"]
