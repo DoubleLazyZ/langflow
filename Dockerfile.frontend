@@ -1,25 +1,25 @@
 # Stage 1: Build the frontend application
 FROM node:latest as build-stage
 
-# Set working directory
-WORKDIR /app
-
-# Argument for backend URL
+# Argument for backend host
 ARG BACKEND_HOST
 
 # Set environment variable for the backend URL
 ENV REACT_APP_BACKEND_URL=${BACKEND_HOST}
 
-# Copy package.json and package-lock.json (or yarn.lock)
-COPY package*.json ./
+# Set working directory in the Docker image
+WORKDIR /app
+
+# Copy package.json and package-lock.json from your frontend folder
+COPY src/frontend/package*.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy frontend source code
-COPY . .
+# Copy the rest of your frontend source code
+COPY src/frontend/ .
 
-# Build the application
+# Build the application (adjust this command based on your specific build process)
 RUN npm run build
 
 # Stage 2: Serve the app with Nginx
