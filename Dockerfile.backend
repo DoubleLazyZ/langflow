@@ -20,20 +20,17 @@ RUN apt-get update && apt-get install -y curl build-essential \
 # Set the working directory
 WORKDIR /app
 
-# Copy the backend application
-COPY ./src/backend /app/src/backend
-
-# Debug: List the contents of /app/src/backend/langflow
-RUN ls -la /app/src/backend/langflow
+# Copy the pyproject.toml, poetry.lock, and README.md files
+COPY ./pyproject.toml ./poetry.lock ./README.md ./
 
 # Install dependencies
 RUN poetry install --without dev --extras deploy
 
 # Copy the backend application
-COPY ./src/backend /app/src/backend
+COPY ./src/backend ./src/backend
 
 # Set an environment variable for auto-login
 # ENV LANGFLOW_AUTO_LOGIN=True
 
 # Start command
-CMD ["poetry", "run", "langflow", "run", "--backend-only", "--port", "7860", "--host", "0.0.0.0", "--no-open-browser", "--components-path", "backend/custom_components", "--env-file", ".env"]
+CMD ["poetry", "run", "langflow", "run", "--backend-only", "--port", "7860", "--host", "0.0.0.0", "--no-open-browser", "--components-path", "src/backend/langflow/custom_components", "--env-file", ".env"]
