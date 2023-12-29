@@ -21,17 +21,16 @@ RUN apt-get update && apt-get install -y curl build-essential \
 
 # Copy project files
 WORKDIR $PYSETUP_PATH
-COPY ./poetry.lock ./pyproject.toml ./README.md ./
+COPY ./poetry.lock ./pyproject.toml ./
 
 # Install dependencies
 RUN poetry install --without dev --extras deploy
 
+# Copy the entire backend application
+COPY ./src/backend /app
+
 # Set the working directory to the root of your Python project
 WORKDIR /app
 
-# Copy your Python project
-COPY ./src/backend/langflow /app
-COPY ./tests /app/tests
-
-# Start command (Replace with your actual start command)
+# Start command
 CMD ["python", "-m", "uvicorn", "langflow.main:create_app", "--host", "0.0.0.0", "--port", "7860"]
