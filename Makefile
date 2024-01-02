@@ -64,9 +64,18 @@ frontendc:
 install_backend:
 	poetry install --extras deploy
 
+# backend:
+# 	make install_backend
+# 	poetry run uvicorn --factory src.backend.langflow.main:create_app --port 7860 --reload --log-level debug
 backend:
 	make install_backend
-	poetry run uvicorn --factory src.backend.langflow.main:create_app --port 7860 --reload --log-level debug
+ifeq ($(login),1)
+	@echo "Running backend without autologin";
+	poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser --components-path src/backend/langflow/custom_components --env-file .env
+else
+	@echo "Running backend with autologin";
+	LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser --components-path src/backend/langflow/custom_components --env-file .env
+endif
 
 build_and_run:
 	echo 'Removing dist folder'
